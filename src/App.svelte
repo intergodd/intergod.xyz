@@ -16,7 +16,7 @@
   
   // Typewriter effect
   let typedText = '';
-  const fullText = 'designer, I love cats';
+  const fullText = 'я люблю котекофф';
   let showCursor = true;
   
   // Particles
@@ -110,7 +110,7 @@
   let searchInputEl;
   
   const spotlightItems = [
-    { icon: 'person', title: 'О дизайнере', desc: 'intergod — дизайнер, люблю котиков', action: () => {} },
+    { icon: 'person', title: 'О мне', desc: 'intergod, люблю котекоф:3', action: () => {} },
     { icon: 'telegram', title: 'Telegram', desc: 'Открыть мой профильь', action: () => window.open('https://t.me/ishfus1', '_blank') },
     { icon: 'spotify', title: 'Spotify', desc: 'Открыть профиль Spotify', action: () => window.open('https://open.spotify.com/user/31l4wtx6qdhmzkh5mhaiwjncolzy', '_blank') },
     { icon: 'star', title: 'Пасхалка', desc: 'Кликни 5 раз на аватар', action: () => { spotlightOpen = false; triggerGlitch(); } },
@@ -375,6 +375,7 @@
   }
   
   function startProgressDrag(e) {
+    e.preventDefault();
     isDraggingProgress = true;
     seekAudio(e);
   }
@@ -387,6 +388,7 @@
   }
   
   function startVolumeDrag(e) {
+    e.preventDefault();
     isDraggingVolume = true;
     setVolume(e);
   }
@@ -456,6 +458,7 @@
   // Drag functionality
   function startDrag(e) {
     if (e.target.closest('.traffic-lights')) return;
+    e.preventDefault();
     isDragging = true;
     const rect = windowEl.getBoundingClientRect();
     dragOffset.x = e.clientX - rect.left - rect.width / 2;
@@ -484,8 +487,7 @@
     };
     
     // Границы окна (окно не выходит за края)
-    const windowWidth = 600;
-    const windowHeight = 485;
+    const { width: windowWidth, height: windowHeight } = windowEl.getBoundingClientRect();
     const minX = -centerX + windowWidth / 2;
     const maxX = centerX - windowWidth / 2;
     const minY = -centerY + windowHeight / 2;
@@ -501,7 +503,7 @@
   }
 </script>
 
-<svelte:window on:mousemove={(e) => { handleMouseMove(e); handleGlobalMouseMove(e); }} on:mouseup={() => { stopDrag(); handleGlobalMouseUp(); }} on:keydown={handleKeydown} on:click={closeContextMenu} />
+<svelte:window on:pointermove={(e) => { handleMouseMove(e); handleGlobalMouseMove(e); }} on:pointerup={() => { stopDrag(); handleGlobalMouseUp(); }} on:keydown={handleKeydown} on:click={closeContextMenu} />
 
 <!-- Notifications -->
 <div class="notifications">
@@ -727,7 +729,7 @@
   
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="audio-progress-container" on:mousedown={startProgressDrag}>
+  <div class="audio-progress-container" on:pointerdown={startProgressDrag}>
     <div class="audio-time">{formatTime(audioCurrentTime)}</div>
     <div class="audio-progress">
       <div class="audio-progress-bar" style="width: {audioProgress}%"></div>
@@ -742,7 +744,7 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M11 5L6 9H2v6h4l5 4V5z"/>
     </svg>
-    <div class="volume-slider" on:mousedown={startVolumeDrag}>
+    <div class="volume-slider" on:pointerdown={startVolumeDrag}>
       <div class="volume-fill" style="width: {audioVolume * 100}%"></div>
       <div class="volume-knob" style="left: {audioVolume * 100}%"></div>
     </div>
@@ -788,7 +790,7 @@
     "
   >
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="title-bar" on:mousedown={startDrag} on:dblclick={handleTitleBarDoubleClick}>
+    <div class="title-bar" on:pointerdown={startDrag} on:dblclick={handleTitleBarDoubleClick}>
       <div class="traffic-lights">
         <button class="dot red" on:click={handleClose} aria-label="Close"></button>
         <button class="dot yellow" on:click={handleMinimize} aria-label="Minimize"></button>
@@ -1972,5 +1974,361 @@
     padding: 2px 5px;
     border-radius: 3px;
     font-family: 'SF Pro', -apple-system, sans-serif;
+  }
+
+  @media (max-width: 700px), (pointer: coarse) {
+    :global(*) {
+      cursor: auto !important;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :global(html),
+    :global(body) {
+      width: 100%;
+      min-height: 100%;
+      overflow: hidden;
+    }
+
+    :global(body) {
+      touch-action: none;
+    }
+
+    .custom-cursor,
+    .tooltip,
+    .spotlight-shortcut,
+    .hint-keys {
+      display: none;
+    }
+
+    main {
+      width: 100%;
+      height: 100svh;
+      min-height: 100svh;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+    }
+
+    .bg-video {
+      width: 100%;
+      height: 100%;
+    }
+
+    .window-card {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100svh;
+      min-height: 100svh;
+      max-height: none;
+      border: none;
+      border-radius: 0;
+      overflow: hidden;
+      transform: none !important;
+      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .title-bar {
+      display: none;
+    }
+
+    .title-bar-line {
+      display: none;
+    }
+
+    .traffic-lights {
+      width: 76px;
+      padding: 0 10px;
+    }
+
+    .dot {
+      width: 13px;
+      height: 13px;
+    }
+
+    .title-container {
+      margin-right: 76px;
+    }
+
+    .content {
+      min-height: 100svh;
+      justify-content: center;
+      padding: max(72px, env(safe-area-inset-top) + 58px) 24px max(128px, env(safe-area-inset-bottom) + 116px);
+    }
+
+    .avatar-container,
+    .avatar {
+      width: 104px;
+      height: 104px;
+    }
+
+    h1.animated-gradient {
+      font-size: 27px;
+      line-height: 32px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 100%;
+      min-height: 22px;
+      margin-bottom: 24px;
+      font-size: 18px;
+      line-height: 22px;
+      overflow-wrap: anywhere;
+    }
+
+    .links {
+      width: min(100%, 240px);
+      gap: 10px;
+    }
+
+    .link-btn {
+      width: 100%;
+      height: 46px;
+      border-radius: 12px;
+    }
+
+    .btn-text {
+      font-size: 17px;
+      line-height: 20px;
+    }
+
+    .keyboard-hint {
+      top: max(8px, env(safe-area-inset-top) + 6px);
+      left: 50%;
+      bottom: auto;
+      transform: translateX(-50%);
+      width: min(calc(100vw - 48px), 340px);
+      min-height: 52px;
+      gap: 10px;
+      padding: 13px 18px;
+      justify-content: center;
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    .keyboard-hint svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2.3;
+    }
+
+    .keyboard-hint:hover,
+    .keyboard-hint:active {
+      transform: translateX(-50%);
+    }
+
+    .hint-text {
+      margin-left: 0;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 17px;
+      line-height: 20px;
+      font-weight: 500;
+    }
+
+    .audio-player {
+      left: 14px;
+      right: 14px;
+      bottom: max(16px, env(safe-area-inset-bottom) + 10px);
+      width: auto;
+      max-width: 430px;
+      margin: 0 auto;
+      gap: 9px;
+      padding: 12px;
+      border-radius: 14px;
+    }
+
+    .audio-top {
+      gap: 11px;
+    }
+
+    .audio-artwork {
+      width: 46px;
+      height: 46px;
+    }
+
+    .audio-btn {
+      width: 40px;
+      height: 40px;
+    }
+
+    .audio-track {
+      font-size: 13px;
+    }
+
+    .audio-artist {
+      font-size: 11px;
+    }
+
+    .audio-progress-container,
+    .audio-volume-row {
+      min-height: 24px;
+      touch-action: none;
+    }
+
+    .audio-volume-row {
+      display: none;
+    }
+
+    .audio-progress,
+    .volume-slider {
+      height: 6px;
+      border-radius: 3px;
+    }
+
+    .progress-knob,
+    .volume-knob {
+      width: 16px;
+      height: 16px;
+      opacity: 1;
+    }
+
+    .spotlight-overlay {
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .spotlight {
+      width: 100%;
+      max-width: none;
+      max-height: min(78svh, 620px);
+      border-width: 0.5px 0 0;
+      border-radius: 22px 22px 0 0;
+      padding-bottom: env(safe-area-inset-bottom);
+      animation: mobileSheetIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .spotlight.closing {
+      animation: mobileSheetOut 0.22s ease forwards;
+    }
+
+    @keyframes mobileSheetIn {
+      from {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes mobileSheetOut {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+    }
+
+    .spotlight-input-wrapper {
+      padding: 18px 18px 14px;
+      gap: 14px;
+    }
+
+    .spotlight-input {
+      min-width: 0;
+      font-size: 18px;
+      line-height: 22px;
+    }
+
+    .spotlight-icon {
+      width: 22px;
+      height: 22px;
+    }
+
+    .spotlight-item {
+      min-height: 62px;
+      padding: 14px 18px;
+      gap: 14px;
+    }
+
+    .spotlight-item-icon {
+      width: 40px;
+      height: 40px;
+    }
+
+    .spotlight-item-icon svg,
+    .spotlight-item-icon img {
+      width: 24px;
+      height: 24px;
+    }
+
+    .spotlight-item-content {
+      min-width: 0;
+    }
+
+    .spotlight-item-title {
+      font-size: 16px;
+      line-height: 20px;
+    }
+
+    .spotlight-item-desc {
+      max-width: 100%;
+      font-size: 13px;
+      line-height: 17px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .notifications {
+      top: max(62px, env(safe-area-inset-top) + 50px);
+      left: 14px;
+      right: 14px;
+      align-items: stretch;
+    }
+
+    .notification {
+      min-width: 0;
+      max-width: none;
+      width: 100%;
+      padding: 11px 13px;
+    }
+
+    .notification-message {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .context-menu {
+      max-width: calc(100vw - 28px);
+    }
+  }
+
+  @media (max-width: 380px) {
+    main {
+      padding: 0;
+    }
+
+    .window-card {
+      min-height: 100svh;
+    }
+
+    .content {
+      padding: max(64px, env(safe-area-inset-top) + 52px) 18px max(118px, env(safe-area-inset-bottom) + 106px);
+    }
+
+    .avatar-container,
+    .avatar {
+      width: 92px;
+      height: 92px;
+    }
+
+    .subtitle {
+      margin-bottom: 18px;
+      font-size: 16px;
+    }
+
+    .audio-player {
+      left: 14px;
+      right: 14px;
+    }
   }
 </style>

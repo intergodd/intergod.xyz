@@ -6,12 +6,14 @@
   let ready = false;
   let mouseX = 0;
   let mouseY = 0;
+  let isTouchDevice = false;
   
   const dispatch = createEventDispatcher();
 
   onMount(() => {
     mouseX = window.innerWidth / 2;
     mouseY = window.innerHeight / 2;
+    isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
   });
   
   setTimeout(() => {
@@ -54,7 +56,7 @@
     
     {#if ready}
       <div class="cursor-hint" style="left: {mouseX}px; top: {mouseY}px;">
-        <span>enter</span>
+        <span>{isTouchDevice ? 'tap' : 'enter'}</span>
       </div>
     {/if}
   </div>
@@ -149,6 +151,19 @@
     to {
       opacity: 1;
       transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .loader.ready {
+      cursor: auto;
+    }
+
+    .cursor-hint {
+      width: 96px;
+      height: 96px;
+      left: 50% !important;
+      top: 50% !important;
     }
   }
 </style>
