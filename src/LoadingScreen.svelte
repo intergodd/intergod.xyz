@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   
   let visible = true;
   let fadeOut = false;
@@ -8,6 +8,11 @@
   let mouseY = 0;
   
   const dispatch = createEventDispatcher();
+
+  onMount(() => {
+    mouseX = window.innerWidth / 2;
+    mouseY = window.innerHeight / 2;
+  });
   
   setTimeout(() => {
     ready = true;
@@ -31,7 +36,14 @@
 {#if visible}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="loader" class:fadeOut class:ready on:mousemove={handleMove} on:click={handleClick}>
+  <div
+    class="loader"
+    class:fadeOut
+    class:ready
+    on:mousemove={handleMove}
+    on:click={handleClick}
+    on:touchstart|preventDefault={handleClick}
+  >
     {#if !ready}
       <div class="ispinner">
         {#each Array(8) as _}
