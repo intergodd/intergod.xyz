@@ -25,8 +25,9 @@
     mouseY = e.clientY;
   }
   
-  function handleClick() {
+  function handleEnter(e) {
     if (!ready) return;
+    e?.preventDefault();
     fadeOut = true;
     dispatch('enter');
     setTimeout(() => { 
@@ -43,8 +44,7 @@
     class:fadeOut
     class:ready
     on:mousemove={handleMove}
-    on:click={handleClick}
-    on:touchstart|preventDefault={handleClick}
+    on:pointerdown={handleEnter}
   >
     {#if !ready}
       <div class="ispinner">

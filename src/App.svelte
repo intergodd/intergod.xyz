@@ -48,6 +48,7 @@
   let audioVolume = 0.3;
   let isDraggingVolume = false;
   let isDraggingProgress = false;
+  let audioFadeTimer;
   
   const trackName = 'faustian bargain';
   const artistName = 'королевский XVII';
@@ -309,8 +310,13 @@
       showNotification('Telegram (intergod)', 'пощол нахуй', 'telegram');
     }, 6000);
     
-    // Init audio
+    initAudio();
+  });
+  
+  function initAudio() {
+    if (audio) return;
     audio = new Audio(base + 'track.mp3');
+    audio.preload = 'auto';
     audio.loop = true;
     audio.volume = 0; // Start at 0 for fade in
     audio.addEventListener('timeupdate', () => {
@@ -322,29 +328,44 @@
     audio.addEventListener('loadedmetadata', () => {
       audioDuration = audio.duration;
     });
-  });
+    audio.addEventListener('play', () => {
+      isPlaying = true;
+    });
+    audio.addEventListener('pause', () => {
+      isPlaying = false;
+    });
+    audio.load();
+  }
+  
+  function setAudioElementVolume(volume) {
+    if (!audio) return;
+    audio.volume = Math.max(0, Math.min(1, volume));
+  }
+  
+  function fadeAudioIn() {
+    clearInterval(audioFadeTimer);
+    let vol = 0;
+    setAudioElementVolume(vol);
+    audioFadeTimer = setInterval(() => {
+      vol += 0.015;
+      if (vol >= audioVolume) {
+        setAudioElementVolume(audioVolume);
+        clearInterval(audioFadeTimer);
+      } else {
+        setAudioElementVolume(vol);
+      }
+    }, 50);
+  }
   
   // Start audio with fade in when user enters site
   function handleSiteEnter() {
     siteEntered = true;
     if (!audio) {
-      console.error('Audio not initialized');
-      return;
+      initAudio();
     }
-    audio.volume = 0;
+    setAudioElementVolume(0);
     audio.play().then(() => {
-      isPlaying = true;
-      // Fade in volume over 2 seconds
-      let vol = 0;
-      const fadeIn = setInterval(() => {
-        vol += 0.015;
-        if (vol >= audioVolume) {
-          audio.volume = audioVolume;
-          clearInterval(fadeIn);
-        } else {
-          audio.volume = vol;
-        }
-      }, 50);
+      fadeAudioIn();
     }).catch((err) => {
       console.error('Audio play failed:', err);
       isPlaying = false;
@@ -352,12 +373,19 @@
   }
   
   function toggleAudio() {
+    if (!audio) {
+      initAudio();
+    }
     if (isPlaying) {
+      clearInterval(audioFadeTimer);
       audio.pause();
     } else {
-      audio.play();
+      setAudioElementVolume(audioVolume);
+      audio.play().catch((err) => {
+        console.error('Audio play failed:', err);
+        isPlaying = false;
+      });
     }
-    isPlaying = !isPlaying;
   }
   
   function formatTime(seconds) {
@@ -384,7 +412,7 @@
     const rect = e.currentTarget.getBoundingClientRect();
     const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     audioVolume = percent;
-    audio.volume = audioVolume;
+    setAudioElementVolume(audioVolume);
   }
   
   function startVolumeDrag(e) {
@@ -400,7 +428,7 @@
         const rect = slider.getBoundingClientRect();
         const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         audioVolume = percent;
-        audio.volume = audioVolume;
+        setAudioElementVolume(audioVolume);
       }
     }
     if (isDraggingProgress) {
