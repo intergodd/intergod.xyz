@@ -7,6 +7,7 @@
   let mouseX = 0;
   let mouseY = 0;
   let isTouchDevice = false;
+  let entered = false;
   
   const dispatch = createEventDispatcher();
 
@@ -26,8 +27,8 @@
   }
   
   function handleEnter(e) {
-    if (!ready) return;
-    e?.preventDefault();
+    if (!ready || entered) return;
+    entered = true;
     fadeOut = true;
     dispatch('enter');
     setTimeout(() => { 
@@ -44,7 +45,8 @@
     class:fadeOut
     class:ready
     on:mousemove={handleMove}
-    on:pointerdown={handleEnter}
+    on:click={handleEnter}
+    on:touchend={handleEnter}
   >
     {#if !ready}
       <div class="ispinner">

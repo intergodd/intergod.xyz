@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import LoadingScreen from './LoadingScreen.svelte';
   
   const base = import.meta.env.BASE_URL;
@@ -41,6 +41,8 @@
   
   // Audio player
   let audio;
+  let audioReady = false;
+  let audioStartWanted = false;
   let isPlaying = false;
   let audioProgress = 0;
   let audioDuration = 0;
@@ -311,12 +313,19 @@
     }, 6000);
     
     initAudio();
+    window.addEventListener('touchend', handleAudioUnlock, { passive: true });
+    window.addEventListener('click', handleAudioUnlock);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('touchend', handleAudioUnlock);
+    window.removeEventListener('click', handleAudioUnlock);
+    clearInterval(audioFadeTimer);
   });
   
   function initAudio() {
-    if (audio) return;
-    audio = new Audio(base + 'track.mp3');
-    audio.preload = 'auto';
+    if (!audio || audioReady) return;
+    audioReady = true;
     audio.loop = true;
     audio.volume = 0; // Start at 0 for fade in
     audio.addEventListener('timeupdate', () => {
@@ -356,20 +365,41 @@
       }
     }, 50);
   }
+
+  function playAudio({ fade = false } = {}) {
+    if (!audio) {
+      console.error('Audio element not ready');
+      return Promise.reject(new Error('Audio element not ready'));
+    }
+
+    return audio.play().then(() => {
+      if (fade) {
+        fadeAudioIn();
+      } else {
+        setAudioElementVolume(audioVolume);
+      }
+    }).catch((err) => {
+      console.error('Audio play failed:', err);
+      isPlaying = false;
+      throw err;
+    });
+  }
+
+  function handleAudioUnlock() {
+    if (!audioStartWanted || isPlaying) return;
+    playAudio().catch(() => {});
+  }
   
   // Start audio with fade in when user enters site
   function handleSiteEnter() {
     siteEntered = true;
+    audioStartWanted = true;
     if (!audio) {
-      initAudio();
+      console.error('Audio element not ready');
+      return;
     }
     setAudioElementVolume(0);
-    audio.play().then(() => {
-      fadeAudioIn();
-    }).catch((err) => {
-      console.error('Audio play failed:', err);
-      isPlaying = false;
-    });
+    playAudio({ fade: true }).catch(() => {});
   }
   
   function toggleAudio() {
@@ -378,13 +408,11 @@
     }
     if (isPlaying) {
       clearInterval(audioFadeTimer);
+      audioStartWanted = false;
       audio.pause();
     } else {
-      setAudioElementVolume(audioVolume);
-      audio.play().catch((err) => {
-        console.error('Audio play failed:', err);
-        isPlaying = false;
-      });
+      audioStartWanted = true;
+      playAudio().catch(() => {});
     }
   }
   
@@ -594,6 +622,8 @@
 </div>
 
 <LoadingScreen on:enter={handleSiteEnter} />
+
+<audio bind:this={audio} src="{base}track.mp3" preload="auto" loop></audio>
 
 <!-- Spotlight Search -->
 {#if spotlightOpen}
