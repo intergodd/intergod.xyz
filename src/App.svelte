@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import LoadingScreen from './LoadingScreen.svelte';
+  import { liquidGlass } from './lib/liquidGlass.js';
   
   const base = import.meta.env.BASE_URL;
   
@@ -91,6 +92,19 @@
   let speedHistory = [];
   let isPointer = false;
   let cursorReady = false;
+  
+  // rAF-throttling for non-critical mousemove side-effects.
+  // Cursor position + drag stay synchronous (responsive feedback).
+  // Shadow / shake-scale / isPointer are batched once per frame to avoid
+  // re-executing the heavy backdrop-filter on every pointer event.
+  let pendingMouseEvent = null;
+  let mouseRaf = null;
+  let lastPointerCheckAt = 0;
+  
+  // Background video — slowed down + auto-paused on hidden tab so the
+  // backdrop-filter behind the glass card has fewer frames to re-process.
+  let bgVideo;
+  const BG_PLAYBACK_RATE = 0.5;
   
   // Context menu
   let contextMenuOpen = false;
@@ -193,36 +207,49 @@
     }, 1500);
   }
   
-  // Custom cursor movement with shake to find
+  // Custom cursor movement with shake to find.
+  // Synchronous bits (must be responsive): cursor position + drag.
+  // Throttled bits (rAF, ~60 fps cap): shadow/scale/isPointer recompute,
+  // because each one mutates the .window-card style and forces a re-paint
+  // of the heavy backdrop-filter.
   function handleMouseMove(e) {
     cursorX = e.clientX;
     cursorY = e.clientY;
+    drag(e);
     
-    // First move - initialize
+    pendingMouseEvent = e;
+    if (mouseRaf !== null) return;
+    mouseRaf = requestAnimationFrame(processMouseSideEffects);
+  }
+  
+  function processMouseSideEffects() {
+    mouseRaf = null;
+    const e = pendingMouseEvent;
+    pendingMouseEvent = null;
+    if (!e) return;
+    
     if (!cursorReady) {
       cursorReady = true;
       lastMouseX = e.clientX;
       return;
     }
     
-    // Check if hovering over clickable element
-    const target = e.target;
-    isPointer = target.closest('a, button, [role="button"], .avatar-container, .spotlight-item, .context-menu-item, .keyboard-hint, .notification') !== null;
+    // isPointer detection: closest() walks up the DOM, so cap to ~30 fps.
+    const now = performance.now();
+    if (now - lastPointerCheckAt > 32) {
+      lastPointerCheckAt = now;
+      const target = e.target;
+      isPointer = target.closest('a, button, [role="button"], .avatar-container, .spotlight-item, .context-menu-item, .keyboard-hint, .notification') !== null;
+    }
     
-    // Calculate speed for shake detection
+    // Shake-to-find scale
     const deltaX = Math.abs(e.clientX - lastMouseX);
     speedHistory.push(deltaX);
     if (speedHistory.length > 8) speedHistory.shift();
-    
     const avgSpeed = speedHistory.reduce((a, b) => a + b, 0) / speedHistory.length;
-    
-    // Scale cursor based on shake speed (macOS shake to find)
-    if (avgSpeed > 30) {
-      cursorScale = Math.min(5, 1 + avgSpeed / 30);
-    } else {
-      cursorScale = Math.max(1, cursorScale - 0.1);
-    }
-    
+    cursorScale = avgSpeed > 30
+      ? Math.min(5, 1 + avgSpeed / 30)
+      : Math.max(1, cursorScale - 0.1);
     lastMouseX = e.clientX;
     
     // Depth shadow effect
@@ -230,9 +257,6 @@
     const centerY = window.innerHeight / 2;
     shadowX = (e.clientX - centerX) / 30;
     shadowY = (e.clientY - centerY) / 30;
-    
-    // Also handle drag
-    drag(e);
   }
   
   // Keyboard shortcuts
@@ -315,13 +339,37 @@
     initAudio();
     window.addEventListener('touchend', handleAudioUnlock, { passive: true });
     window.addEventListener('click', handleAudioUnlock);
+    
+    // Slow down the background video — every visible frame triggers a
+    // backdrop-filter re-execution behind the card, so halving the frame
+    // rate roughly halves the per-frame compositor cost. Looks identical
+    // for an ambient looped clip.
+    if (bgVideo) {
+      bgVideo.playbackRate = BG_PLAYBACK_RATE;
+      bgVideo.addEventListener('loadedmetadata', () => {
+        bgVideo.playbackRate = BG_PLAYBACK_RATE;
+      });
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
   });
 
   onDestroy(() => {
     window.removeEventListener('touchend', handleAudioUnlock);
     window.removeEventListener('click', handleAudioUnlock);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
     clearInterval(audioFadeTimer);
+    if (mouseRaf !== null) cancelAnimationFrame(mouseRaf);
   });
+  
+  function handleVisibilityChange() {
+    if (!bgVideo) return;
+    if (document.hidden) {
+      bgVideo.pause();
+    } else {
+      bgVideo.play().catch(() => {});
+      bgVideo.playbackRate = BG_PLAYBACK_RATE;
+    }
+  }
   
   function initAudio() {
     if (!audio || audioReady) return;
@@ -602,17 +650,14 @@
   {/each}
 </div>
 
-<!-- Custom cursor -->
+<!-- Custom cursor (positioned via transform — left/top would force layout
+     on every pointer event and was a measurable hot path) -->
 <div 
   class="custom-cursor"
   class:pointer={isPointer}
   class:ready={cursorReady}
   bind:this={cursorEl}
-  style="
-    left: {cursorX}px;
-    top: {cursorY}px;
-    transform: translate(-20%, -15%) scale({cursorScale});
-  "
+  style="transform: translate3d({cursorX}px, {cursorY}px, 0) translate(-20%, -15%) scale({cursorScale});"
 >
   {#if isPointer}
     <img src="{base}cursor-pointer.svg" alt="" draggable="false" />
@@ -828,7 +873,7 @@
 
 <main>
   <div class="background">
-    <video autoplay muted loop playsinline class="bg-video">
+    <video bind:this={bgVideo} autoplay muted loop playsinline class="bg-video">
       <source src="{base}bg.mp4" type="video/mp4">
     </video>
   </div>
@@ -842,6 +887,17 @@
     class:dragging={isDragging}
     bind:this={windowEl}
     on:contextmenu={handleContextMenu}
+    use:liquidGlass={{
+      radius: 20,
+      glassThickness: 70,
+      bezelWidth: 18,
+      refractiveIndex: 1.55,
+      scaleRatio: 1.0,
+      blurAmount: 0,
+      cssBlur: 8,
+      specularOpacity: 0.5,
+      specularSaturation: 4
+    }}
     style="
       transform: translate({position.x}px, {position.y}px) {minimized ? 'scale(0.01) translateY(500px)' : closed ? 'scale(0.8)' : show ? '' : 'translateY(20px)'};
       box-shadow: {shadowX}px {shadowY + 20}px 60px rgba(0, 0, 0, 0.4), {shadowX * 0.5}px {shadowY * 0.5 + 10}px 30px rgba(0, 0, 0, 0.3);
@@ -925,10 +981,12 @@
   /* Custom cursor */
   .custom-cursor {
     position: fixed;
+    top: 0;
+    left: 0;
     pointer-events: none;
     z-index: 99999;
     transition: transform 0.1s ease-out;
-    will-change: transform, left, top;
+    will-change: transform;
     opacity: 0;
   }
   
@@ -988,20 +1046,47 @@
     object-fit: cover;
   }
 
-  /* Window Card - Frosted Glass */
+  /* Window Card - Liquid Glass */
   .window-card {
     width: 600px;
     height: 485px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 9px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
     overflow: hidden;
     position: relative;
+    isolation: isolate;
     z-index: 10;
     opacity: 0;
     transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Refraction + tint sit BEHIND the content (negative z in the
+     element's stacking context). On non-Chromium browsers
+     `--liquid-backdrop` is unset, so the fallback blur applies.
+     `will-change` hints the compositor to keep this on its own GPU layer
+     so per-frame video repaints don't invalidate the whole .window-card. */
+  .window-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-color: rgba(0, 0, 0, 0.2);
+    backdrop-filter: var(--liquid-backdrop, blur(10px));
+    -webkit-backdrop-filter: var(--liquid-backdrop, blur(10px));
+    pointer-events: none;
+    will-change: backdrop-filter;
+  }
+
+  /* Edge highlight on top of content (subtle inner glow) */
+  .window-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    box-shadow: inset 0 0 22px -6px rgba(255, 255, 255, 0.35);
+    pointer-events: none;
   }
 
   .window-card.show {
@@ -1028,7 +1113,7 @@
     box-shadow: 0px 0.5px 0px rgba(0, 0, 0, 0.1), 0px 1px 0px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-radius: 9px 9px 0px 0px;
+    border-radius: 20px 20px 0px 0px;
   }
 
   .title-bar-line {
