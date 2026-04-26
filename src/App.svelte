@@ -26,7 +26,8 @@
   
   const links = [
     { id: 1, title: 'my tg ', icon: 'telegram', url: 'https://t.me/ishfus1', tooltip: 'Открыть Telegram', tooltipPos: 'top' },
-    { id: 2, title: 'spotify profile', icon: 'spotify', url: 'https://open.spotify.com/user/31l4wtx6qdhmzkh5mhaiwjncolzy', tooltip: 'Открыть Spotify', tooltipPos: 'bottom' }
+    { id: 2, title: 'spotify profile', icon: 'spotify', url: 'https://open.spotify.com/user/31l4wtx6qdhmzkh5mhaiwjncolzy', tooltip: 'Открыть Spotify', tooltipPos: 'bottom' },
+    { id: 3, title: 'my gitlab', icon: 'gitlab', url: 'https://gitlab.com/intergodd', tooltip: 'Открыть GitLab', tooltipPos: 'top' }
   ];
   
   // Avatar tilt when dragging
@@ -117,6 +118,7 @@
     { type: 'separator' },
     { icon: 'telegram', label: 'Telegram', action: () => window.open('https://t.me/ishfus1', '_blank') },
     { icon: 'spotify', label: 'Spotify', action: () => window.open('https://open.spotify.com/user/31l4wtx6qdhmzkh5mhaiwjncolzy', '_blank') },
+    { icon: 'gitlab', label: 'GitLab', action: () => window.open('https://gitlab.com/intergodd', '_blank') },
     { type: 'separator' },
     { icon: 'search', label: 'Поиск', shortcut: '⌘K', action: () => { spotlightOpen = true; setTimeout(() => searchInputEl?.focus(), 100); } },
   ];
@@ -130,6 +132,7 @@
     { icon: 'person', title: 'О мне', desc: 'intergod, люблю котекоф:3', action: () => {} },
     { icon: 'telegram', title: 'Telegram', desc: 'Открыть мой профильь', action: () => window.open('https://t.me/ishfus1', '_blank') },
     { icon: 'spotify', title: 'Spotify', desc: 'Открыть профиль Spotify', action: () => window.open('https://open.spotify.com/user/31l4wtx6qdhmzkh5mhaiwjncolzy', '_blank') },
+    { icon: 'gitlab', title: 'GitLab', desc: 'Открыть мой профиль GitLab', action: () => window.open('https://gitlab.com/intergodd', '_blank') },
     { icon: 'star', title: 'Пасхалка', desc: 'Кликни 5 раз на аватар', action: () => { spotlightOpen = false; triggerGlitch(); } },
     { icon: 'keyboard', title: 'Горячие клавиши', desc: '⌘K — поиск, Esc — закрыть', action: () => {} },
     { icon: 'cursor', title: 'Shake to find', desc: 'Потряси мышкой чтобы найти курсор', action: () => {} },
@@ -707,6 +710,8 @@
                 <img src="{base}telegram.svg" alt="" width="20" height="20" />
               {:else if item.icon === 'spotify'}
                 <img src="{base}spotify.svg" alt="" width="20" height="20" />
+              {:else if item.icon === 'gitlab'}
+                <img src="{base}gitlab.svg" alt="" width="20" height="20" />
               {:else if item.icon === 'star'}
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -764,6 +769,8 @@
               <img src="{base}telegram.svg" alt="" width="16" height="16" />
             {:else if item.icon === 'spotify'}
               <img src="{base}spotify.svg" alt="" width="16" height="16" />
+            {:else if item.icon === 'gitlab'}
+              <img src="{base}gitlab.svg" alt="" width="16" height="16" />
             {:else if item.icon === 'search'}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="11" cy="11" r="8"/>
